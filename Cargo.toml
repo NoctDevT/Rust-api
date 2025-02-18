@@ -1,0 +1,38 @@
+[package]
+name = "API"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "rest-api"
+path = "src/main.rs"
+
+
+[profile.release]
+opt-level = 3  
+debug = false
+overflow-checks = true
+
+[profile.dev]
+opt-level = 1  
+debug = true   
+overflow-checks = true
+
+[dependencies]
+actix-web = "4.9.0"
+actix-rt = "2.10.0"
+serde = {version = "1.0", features = ["derive"]}
+serde_json = "1.0"
+dotenv = "0.15"
+diesel = { version = "2.0", features = ["postgres", "r2d2", "uuid", "chrono"] }
+tokio = {version = "1.43.0", features = ["full"]}
+bcrypt = "0.17"
+uuid = {version = "1.12.1", features = ["serde", "v4"]}
+chrono = {version = "0.4.39", features = ["serde"]}
+jsonwebtoken = "9.3.1"           
+futures = "0.3.31"
+actix-cors = "0.7.0"
+diesel_migrations = "2.2.0"
+diesel-async = "0.5.2"
+actix-ws = "0.3.0"
+futures-util = "0.3.31"
