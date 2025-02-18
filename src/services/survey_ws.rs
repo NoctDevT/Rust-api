@@ -4,14 +4,11 @@ use futures_util::StreamExt;
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 
-// We'll need an atomic to assign unique IDs ourselves,
-// since actix_ws::Session no longer provides an .id().
+
 use std::sync::atomic::{AtomicU64, Ordering};
 
-// A global (or static) atomic counter for generating unique session IDs.
 static NEXT_ID: AtomicU64 = AtomicU64::new(1);
 
-/// Shared type for your session map
 pub type Sessions = Arc<Mutex<HashMap<u64, Session>>>;
 
 pub async fn survey_ws_route(
@@ -19,22 +16,17 @@ pub async fn survey_ws_route(
     payload: web::Payload,
     sessions: web::Data<Sessions>,
 ) -> Result<HttpResponse, Error> {
-    // 1) Complete the WebSocket handshake
     let (response, mut session, mut msg_stream) = handle(&req, payload)?;
 
-    // 2) Generate a unique ID for this connection
     let session_id = NEXT_ID.fetch_add(1, Ordering::Relaxed);
 
-    // 3) Insert the session into the shared sessions map
     {
         let mut sessions_map = sessions.lock().unwrap();
         sessions_map.insert(session_id, session.clone());
     }
 
-    // 4) Clone sessions Arc for use inside the spawned task
     let sessions_clone = sessions.clone();
 
-    // 5) Spawn a background task to handle messages
     actix_web::rt::spawn(async move {
             while let Some(Ok(msg)) = msg_stream.next().await {
                 match msg {
@@ -58,11 +50,9 @@ pub async fn survey_ws_route(
             }
 
 
-        // When the stream ends, remove the session from the map
         let mut sessions_map = sessions_clone.lock().unwrap();
         sessions_map.remove(&session_id);
     });
 
-    // 6) Return the handshake response
     Ok(response)
 }
