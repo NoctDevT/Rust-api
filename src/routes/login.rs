@@ -1,77 +1,54 @@
 
 use actix_web::{web, HttpResponse, Responder};
-use bcrypt::{hash, verify}; 
+use bcrypt::verify; 
 use chrono::{Utc, Duration};
 use std::env;
 use jsonwebtoken::{encode, EncodingKey, Header};
 use actix_web::http::header::{AUTHORIZATION};
 // use actix_web::cookie::{Cookie, SameSite};
 
+use crate::db::DbPool;
 use crate::models::login_model::LoginRequest;
 use crate::models::claims::Claims;
 
+use crate::services::db_user_service::get_user_by_username;
 
-pub async fn user_login(data: web::Json<LoginRequest>) -> impl Responder {
-    let mock_username = "test_user";
-    let mock_salt = "random_salt";
-    let mock_hashed_password = hash_with_salt("password", mock_salt);
+// Simplified logic of login page following code review. 
+// Treating it more like a traditional rest api control flow 
 
-    if data.username != mock_username {
-        return HttpResponse::Unauthorized().body("Invalid username or password");
+//Memory efficiency to keep space low. 
+const INVALID_CREDENTIALS: &str = "Invalid username or password provided"; 
+const SERVER_ERROR: &str = "Server error, please try again later"; 
+
+pub async fn user_login(
+    pool: web::Data<DbPool>, 
+    data: web::Json<LoginRequest>
+) -> impl Responder {
+
+    let mut conn = match pool.get() {
+        Ok(conn) => conn,
+        Err(_) => return HttpResponse::InternalServerError().body(SERVER_ERROR),
+    };
+
+    let user = match get_user_by_username(&mut conn, &data.username) {
+        Ok(user) => user,
+        Err(_) => return HttpResponse::Unauthorized().body(INVALID_CREDENTIALS),
+    };
+
+    match verify(&data.password, &user.password) {
+        Ok(true) => {} 
+        Ok(false) => return HttpResponse::Unauthorized().body(INVALID_CREDENTIALS), 
+        Err(_) => return HttpResponse::InternalServerError().body(SERVER_ERROR), 
     }
 
-    let salted_password = format!("{}{}", data.password, mock_salt);
-    match verify(&salted_password, &mock_hashed_password) {
-        Ok(true) => {
-            match generate_jwt(&data.username){
-                Ok(token) => {
-                    HttpResponse::Ok()
-                        .insert_header((AUTHORIZATION, format!("Bearer {}", token))) // ✅ Correct way to set Authorization header
-                        .json(serde_json::json!({ "token": token }))
-                }
-                Err(_) => HttpResponse::InternalServerError().body("Failed to generate token"),
-            }
-        }
-        // Ok(true) => {
-        //     match generate_jwt(&data.username){
-        //         // Ok(token) => HttpResponse::Ok()
-        //         //     .insert_header(("Authorization", format!("Bearer {}", token)))
-        //         //     .json(serde_json::json!({ "token": token })),
-        //         // Err(_) => HttpResponse::InternalServerError().body("Failed to generate token"),
-        //         Ok(token) => {
-        //             let mut response = HttpResponse::Ok().json(serde_json::json!({ "token": token }));
-        //             response.headers_mut().insert(
-        //                 AUTHORIZATION,
-        //                 HeaderValue::from_str(&format!("Bearer {}", token)).unwrap(),
-        //             );
-        //             println!("✅ Final Response Headers: {:?}", response.headers()); 
-        //             response
-        //         }
-        //         Err(_) => HttpResponse::InternalServerError().body("Failed to generate token"),
-        //         // Ok(token) => {
-        //         //     let cookie = Cookie::build("auth_token", token.clone())
-        //         //         .http_only(true)  // ❌ Prevent JavaScript access (prevents XSS)
-        //         //         .secure(false)  // ✅ Send over HTTPS only (change to false in dev)
-        //         //         .same_site(SameSite::Strict)  // ✅ Prevent CSRF (use Lax if needed)
-        //         //         .path("/")
-        //         //         .finish();
-
-        //         //     HttpResponse::Ok()
-        //         //         .cookie(cookie) // ✅ Set cookie in response
-        //         //         .json(serde_json::json!({ "message": "Login successful" }))
-        //         // }
-        //         // Err(_) => HttpResponse::InternalServerError().body("Failed to generate token"),
-        //     }
-        // }
-        _ => HttpResponse::Unauthorized().body("Invalid username or password")
+    if let Ok(token) = generate_jwt(&user.username) {
+        return HttpResponse::Ok()
+            .insert_header((AUTHORIZATION, format!("Bearer {}", token)))
+            .json(serde_json::json!({ "token": token }));
     }
-}
 
-fn hash_with_salt(password: &str, salt: &str) -> String {
-    let salted_password = format!("{}{}", password, salt);
-    hash(salted_password, 4).expect("Failed to hash password")
+    HttpResponse::InternalServerError().body(SERVER_ERROR)
 }
-
 
 fn generate_jwt(username: &str) -> Result<String, jsonwebtoken::errors::Error> {
     let secret = env::var("SECRET_KEY").expect("The secret key is not set");

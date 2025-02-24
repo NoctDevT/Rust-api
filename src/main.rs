@@ -10,10 +10,11 @@ use actix_web::{web, App, HttpResponse, HttpServer, Responder};
 use middleware::auth_middlewares::AuthMiddleware;
 use dotenv::dotenv;
 use routes::login::{user_login};
-use crate::db::establish_connection;
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
 use crate::services::survey_ws::{survey_ws_route, Sessions};
+use crate::db::establish_connection;
+use routes::register::register_user;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -28,12 +29,13 @@ async fn main() -> std::io::Result<()> {
         .app_data(web::Data::new(sessions.clone()))  
         .app_data(web::Data::new(pool.clone()))      
         .wrap(Cors::default()
-            .allow_any_origin()
-            .allow_any_method()
-            .allow_any_header()
+                .allow_any_origin()
+                .allow_any_method()
+                .allow_any_header()
             .expose_headers(vec!["Authorization"]))
             .route("/login", web::post().to(user_login)) 
             .route("/ws/survey", web::get().to(survey_ws_route))
+            .route("/register", web::post().to(register_user))
             .service(
                 web::scope("")
                     .wrap(AuthMiddleware)
