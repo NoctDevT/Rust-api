@@ -2,6 +2,7 @@ mod middleware;
 mod models;
 mod routes;
 mod db; 
+mod helper; 
 mod services;
 pub mod schema;
 

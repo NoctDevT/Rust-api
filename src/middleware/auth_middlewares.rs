@@ -1,6 +1,6 @@
 use actix_web::{
     dev::{Service, ServiceRequest, ServiceResponse, Transform},
-    Error, HttpResponse, body::BoxBody,
+    Error, HttpResponse, body::BoxBody,HttpMessage
 };
 use futures::future::{ok, LocalBoxFuture, Ready};
 use jsonwebtoken::{decode, DecodingKey, Validation, Algorithm};
@@ -58,7 +58,11 @@ where
                             &Validation::new(Algorithm::HS256),
                         ) {
                             Ok(decoded_token) => {
-                                println!("Token valid for user: {}", decoded_token.claims.sub);
+                                let user_id = decoded_token.claims.sub;
+                                println!("Token valid for user: {}", user_id);
+
+                                //storing the user id for use in the api .
+                                req.extensions_mut().insert(user_id);
                                 return srv.call(req).await;
                             }
                             Err(_) => {

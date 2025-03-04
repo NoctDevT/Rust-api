@@ -1,10 +1,11 @@
 use serde::{Deserialize, Serialize};
 use crate::schema::users;
 use diesel::prelude::*;
+use uuid::Uuid;
 
-#[derive(Debug, Queryable, Serialize)]
+#[derive(Debug, Queryable, Serialize, Selectable)]
 pub struct User {
-    pub id: i32,
+    pub id: Uuid,
     pub username: String,
     pub password: String,
     pub name: Option<String>,

@@ -11,7 +11,7 @@ use crate::db::DbPool;
 use crate::models::login_model::LoginRequest;
 use crate::models::claims::Claims;
 
-use crate::services::db_user_service::get_user_by_username;
+use crate::services::db_service::get_user_by_username;
 
 // Simplified logic of login page following code review. 
 // Treating it more like a traditional rest api control flow 
