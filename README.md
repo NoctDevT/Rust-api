@@ -12,7 +12,7 @@ This project utilizes Diesel as an ORM to interact with our PostgreSQL database.
 Currently incomplete due to priortisation on using the project to develop understanding of how Actix Web works.
 
 
-Hosted in Localhost:8000
+Hosted on Localhost:8000
 
 
 #### Routes
@@ -62,10 +62,8 @@ To request a survey from the DB:
   "data": {
     "survey_id": "550e8400-e29b-41d4-a716-446655440000"
   }
-}```
-
-
-
+}
+```
 
 To submit a survey with all questions attached:
 
