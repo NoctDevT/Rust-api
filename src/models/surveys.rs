@@ -60,3 +60,26 @@ pub struct NewResponse {
     #[serde(skip_deserializing)] // Need this so that ok(response) == json_from_str<newResponse>(text) will work without userid being specified`
     pub user_id: Option<Uuid>,
 }
+
+
+#[derive(Debug, Deserialize)]
+#[serde(tag = "type", content="data")]
+pub enum ClientMessage {
+    Authenticate { token: String },
+    RequestSurvey {survey_id: Uuid},
+    SubmitResponses(SubmitResponsesData), 
+    Ping,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct SubmitResponsesData {
+    pub survey_id: Uuid,
+    pub responses: Vec<QuestionResponse>,
+}
+
+
+#[derive(Debug, Deserialize)]
+pub struct QuestionResponse {
+    pub question_id: Uuid,
+    pub answer: String,
+}
